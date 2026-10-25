@@ -7,6 +7,7 @@ require (
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/charmbracelet/x/ansi v0.11.9
 	github.com/sahilm/fuzzy v0.1.3
+	github.com/spf13/pflag v1.0.10
 )
 
 require (

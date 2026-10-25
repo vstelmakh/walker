@@ -8,11 +8,15 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/vstelmakh/walker/internal/cli"
 	"github.com/vstelmakh/walker/internal/dirs"
 	"github.com/vstelmakh/walker/internal/nav"
 	"github.com/vstelmakh/walker/internal/search"
 	"github.com/vstelmakh/walker/internal/ui"
 )
+
+// version is set at build time, for example: -ldflags "-X main.version=1.2.3".
+var version = "dev"
 
 var errCancelled = errors.New("cancelled")
 
@@ -27,7 +31,19 @@ func main() {
 
 // run draws the UI on stderr, so stdout carries only the path, for example: cd "$(walker)".
 func run(args []string) error {
-	start, err := startDir(args)
+	opts, err := cli.Parse(args)
+	if err != nil {
+		return err
+	}
+
+	// The help and the version go to stderr, because stdout is for the path. Otherwise, a shell function like
+	// cd "$(walker "$@")" would try to change to the help text.
+	if text := opts.Info(version); text != "" {
+		fmt.Fprint(os.Stderr, text)
+		return nil
+	}
+
+	start, err := startDir(opts.Dir)
 	if err != nil {
 		return err
 	}
@@ -55,13 +71,9 @@ func run(args []string) error {
 	return nil
 }
 
-func startDir(args []string) (string, error) {
-	switch len(args) {
-	case 0:
+func startDir(dir string) (string, error) {
+	if dir == "" {
 		return os.Getwd()
-	case 1:
-		return filepath.Abs(args[0])
-	default:
-		return "", errors.New("usage: walker [dir]")
 	}
+	return filepath.Abs(dir)
 }
