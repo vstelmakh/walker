@@ -68,6 +68,7 @@ main() {
     sudo_cmd=""
     if [[ ! -w "$install_dir" ]]; then
         sudo_cmd="sudo"
+        echo "$install_dir is not writable by you. Using sudo to install there, it may ask for your password."
     fi
 
     $sudo_cmd mkdir -p "$install_dir"
