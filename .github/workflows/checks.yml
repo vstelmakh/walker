@@ -1,0 +1,85 @@
+name: 'Checks'
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: checks-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GO_USE_DOCKER: '0' # use the Go installed by setup-go, not Docker (see Makefile)
+
+jobs:
+  anchors: # This job is used to hold the anchors (reusable configurations). Expected not to run.
+    if: false
+    name: 'Anchors (expected to skip)'
+    runs-on: &runs_on 'ubuntu-latest'
+    timeout-minutes: &timeout_minutes 15
+    steps:
+      - &step_checkout
+        name: 'Git Checkout'
+        uses: actions/checkout@v7
+      - &step_setup_go
+        name: 'Setup Go'
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod # also enables module and build cache, keyed by go.sum
+
+  fmt:
+    name: 'Code Style'
+    runs-on: *runs_on
+    timeout-minutes: *timeout_minutes
+    steps:
+      - *step_checkout
+      - *step_setup_go
+      - name: 'Check formatting'
+        run: make fmt-check
+
+  vet:
+    name: 'Static Analysis'
+    runs-on: *runs_on
+    timeout-minutes: *timeout_minutes
+    steps:
+      - *step_checkout
+      - *step_setup_go
+      - name: 'Run go vet'
+        run: make vet
+
+  test:
+    name: 'Tests'
+    runs-on: *runs_on
+    timeout-minutes: *timeout_minutes
+    steps:
+      - *step_checkout
+      - *step_setup_go
+      - name: 'Run tests'
+        run: make test
+
+  build:
+    name: 'Build (${{ matrix.target }})'
+    runs-on: *runs_on
+    timeout-minutes: *timeout_minutes
+    strategy:
+      fail-fast: false # report every platform, not only the first failure
+      matrix:
+        target: ['macos-arm64', 'macos-amd64', 'linux-amd64', 'linux-arm64', 'windows-amd64']
+    steps:
+      - *step_checkout
+      - *step_setup_go
+      - name: 'Build binary'
+        run: make build-${{ matrix.target }}
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v7
+        with:
+          path: dist/walker-${{ matrix.target }}*
+          archive: false # upload the file as it is, the artifact is named after the file
+          retention-days: 7
+          if-no-files-found: error

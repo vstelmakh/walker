@@ -1,6 +1,9 @@
 .DEFAULT_GOAL := help
 .SILENT:
-.PHONY: help test vet fmt get tidy clean build build-all build-macos-arm64 build-macos-amd64 build-linux-amd64 build-linux-arm64 build-windows-amd64
+.PHONY: help test vet fmt fmt-check get tidy clean build build-macos-arm64 build-macos-amd64 build-linux-amd64 build-linux-arm64 build-windows-amd64
+
+# Go runs in Docker by default. Set GO_USE_DOCKER=0 to run the Go installed on the host.
+GO_USE_DOCKER ?= 1
 
 # Go version (read from go.mod)
 GO_VERSION := $(shell awk '/^go /{print $$2}' go.mod)
@@ -14,6 +17,15 @@ DOCKER_GO = docker run --rm \
 	-v "$(CURDIR)":/app -w /app \
 	-v go-cache:/go
 
+ifeq ($(GO_USE_DOCKER),1)
+# GOOS and GOARCH are passed through from the environment, make exports them when they are set on the command line
+GO_CMD = $(DOCKER_GO) -e GOOS -e GOARCH $(GO_IMAGE) go
+GOFMT_CMD = $(DOCKER_GO) $(GO_IMAGE) gofmt
+else
+GO_CMD = go
+GOFMT_CMD = gofmt
+endif
+
 # Current time in milliseconds, uses perl because date on macOS has no sub-second precision
 NOW_MS = perl -MTime::HiRes=time -e 'printf "%d", time * 1000'
 
@@ -22,21 +34,25 @@ help: ## Show available commands
 		| awk 'BEGIN {FS = ":.*## "}; {printf "  \033[32m%-24s\033[0m %s\n", $$1, $$2}'
 
 test: ## Run tests
-	$(DOCKER_GO) $(GO_IMAGE) go test ./...
+	$(GO_CMD) test ./...
 
 vet: ## Report suspicious Go code
-	$(DOCKER_GO) $(GO_IMAGE) go vet ./...
+	$(GO_CMD) vet ./...
 
 fmt: ## Format Go files
-	$(DOCKER_GO) $(GO_IMAGE) gofmt -l -w .
+	$(GOFMT_CMD) -l -w .
+
+fmt-check: ## Fail if any Go file is not formatted
+	UNFORMATTED=$$($(GOFMT_CMD) -l .); \
+	[ -z "$$UNFORMATTED" ] || { printf 'Not formatted:\n%s\n' "$$UNFORMATTED" >&2; exit 1; }
 
 # Usage example: make get PKG=github.com/foo/bar@latest
 get: ## Add or update a Go module, requires PKG argument to be set
 	[ -n "$(PKG)" ] || { echo 'PKG is required, example: make get PKG=github.com/foo/bar@latest' >&2; exit 1; }
-	$(DOCKER_GO) $(GO_IMAGE) go get $(PKG)
+	$(GO_CMD) get $(PKG)
 
 tidy: ## Add missing and remove unused Go modules
-	$(DOCKER_GO) $(GO_IMAGE) go mod tidy
+	$(GO_CMD) mod tidy
 
 clean: ## Remove build output
 	rm -rf dist
@@ -65,7 +81,7 @@ build: ## Build binary, requires GOOS and GOARCH arguments to be set
 	OUT=dist/walker-$(if $(filter darwin,$(GOOS)),macos,$(GOOS))-$(GOARCH)$(if $(filter windows,$(GOOS)),.exe); \
 	printf 'Binary:   %s\n' "$$OUT"; \
 	START=$$($(NOW_MS)); \
-	if $(DOCKER_GO) -e GOOS=$(GOOS) -e GOARCH=$(GOARCH) $(GO_IMAGE) go build -o $$OUT .; \
+	if $(GO_CMD) build -o $$OUT .; \
 	then \
 		printf '\033[32mDone\033[0m in %sms, size %s\n' "$$(( $$($(NOW_MS)) - START ))" "$$(du -h $$OUT | cut -f1)"; \
 	else \
