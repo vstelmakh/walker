@@ -136,6 +136,16 @@ best match is selected first.
 | `Ctrl+C`    | Exit without changing directory.                                                                 |
 | Any text    | Search. Pasted text is added to the search too.                                                  |
 
+## Uninstall
+
+1. Remove the binary. The install script puts it in `/usr/local/bin` by default:
+   ```bash
+   sudo rm /usr/local/bin/walker
+   ```
+   If you installed it elsewhere, `which walker` shows where it is.
+2. Delete the `lk` function from your shell config. These are the lines you added in [Setup](#setup). Then restart the
+   shell.
+
 ## Credits
 
 Inspired by [antonmedv/walk](https://github.com/antonmedv/walk).  
