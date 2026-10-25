@@ -1,0 +1,72 @@
+name: 'Release'
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, also used as the Git tag name (example: 1.2.3)'
+        type: string
+        required: true
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read # jobs that need more raise it themselves
+
+env:
+  VERSION: ${{ inputs.version }}
+
+jobs:
+  validate:
+    name: 'Validate Version'
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 5
+    steps:
+      - name: 'Git Checkout'
+        uses: actions/checkout@v7
+      - name: 'Check Version Format'
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=Invalid version::Expected format X.Y.Z, got '$VERSION'."
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null; then
+            echo "::error title=Tag exists::Tag '$VERSION' already exists."
+            exit 1
+          fi
+
+  build_and_test:
+    name: 'Build and Test'
+    needs: validate
+    uses: ./.github/workflows/build-and-test.yml
+
+  release:
+    name: 'Create Release'
+    needs: build_and_test
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the tag and the release
+    steps:
+      - name: 'Download binaries'
+        uses: actions/download-artifact@v8
+        with:
+          pattern: 'walker-*'
+          path: dist
+          merge-multiple: true
+      - name: 'Create Checksums'
+        working-directory: dist
+        run: |
+          ls -l
+          sha256sum walker-* > SHA256SUMS
+      - name: 'Create GitHub Release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "$VERSION" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "$VERSION" \
+            --notes ''

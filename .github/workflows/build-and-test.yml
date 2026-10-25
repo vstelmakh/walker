@@ -1,6 +1,7 @@
-name: 'Checks'
+name: 'Build and Test'
 
 on:
+  workflow_call:
   workflow_dispatch:
   pull_request:
   push:
@@ -8,7 +9,7 @@ on:
       - main
 
 concurrency:
-  group: checks-${{ github.event.pull_request.number || github.run_id }}
+  group: build-and-test-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 permissions:
@@ -40,7 +41,7 @@ jobs:
     steps:
       - *step_checkout
       - *step_setup_go
-      - name: 'Check formatting'
+      - name: 'Check Formatting'
         run: make fmt-check
 
   vet:
@@ -60,10 +61,10 @@ jobs:
     steps:
       - *step_checkout
       - *step_setup_go
-      - name: 'Run tests'
+      - name: 'Run Rests'
         run: make test
 
-  build:
+  build: # No "needs" on purpose, so binaries are built and uploaded even when other jobs fail.
     name: 'Build (${{ matrix.target }})'
     runs-on: *runs_on
     timeout-minutes: *timeout_minutes
@@ -74,7 +75,7 @@ jobs:
     steps:
       - *step_checkout
       - *step_setup_go
-      - name: 'Build binary'
+      - name: 'Build Binary'
         run: make build-${{ matrix.target }}
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@v7
