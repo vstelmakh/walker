@@ -148,7 +148,7 @@ best match is selected first.
 
 ## Credits
 
-Inspired by [antonmedv/walk](https://github.com/antonmedv/walk).  
-
 [Volodymyr Stelmakh](https://github.com/vstelmakh)  
 Licensed under the MIT License. See [LICENSE](./LICENSE) for more information.
+
+Walker is inspired by [antonmedv/walk](https://github.com/antonmedv/walk).
