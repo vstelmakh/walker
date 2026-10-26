@@ -57,6 +57,7 @@ tidy: ## Add missing and remove unused Go modules
 clean: ## Remove build output
 	rm -rf dist
 
+# All build targets accept the optional BUILD_VERSION argument, for example: make build-linux-amd64 BUILD_VERSION=1.2.3
 build-macos-arm64: ## Build for macOS, Apple Silicon
 	$(MAKE) build GOOS=darwin GOARCH=arm64
 
@@ -72,16 +73,17 @@ build-linux-arm64: ## Build for Linux, ARM64
 build-windows-amd64: ## Build for Windows, x86-64
 	$(MAKE) build GOOS=windows GOARCH=amd64
 
-# Usage example: make build GOOS=linux GOARCH=amd64
+# Usage example: make build GOOS=linux GOARCH=amd64 BUILD_VERSION=1.2.3
+# BUILD_VERSION is the version printed by walker --version. It is optional, the binary reports "dev" without it.
 # Binary file name says "macos", because Go calls macOS "darwin"
-build: ## Build binary, requires GOOS and GOARCH arguments to be set
+build: ## Build binary, requires GOOS and GOARCH arguments to be set, BUILD_VERSION is optional
 	[ -n "$(GOOS)" ] && [ -n "$(GOARCH)" ] || { echo 'GOOS and GOARCH are required, example: make build GOOS=linux GOARCH=amd64' >&2; exit 1; }
 	mkdir -p dist
 	printf 'Platform: %s/%s\n' '$(GOOS)' '$(GOARCH)'
 	OUT=dist/walker-$(if $(filter darwin,$(GOOS)),macos,$(GOOS))-$(GOARCH)$(if $(filter windows,$(GOOS)),.exe); \
 	printf 'Binary:   %s\n' "$$OUT"; \
 	START=$$($(NOW_MS)); \
-	if $(GO_CMD) build -o $$OUT .; \
+	if $(GO_CMD) build $(if $(BUILD_VERSION),-ldflags "-X main.version=$(BUILD_VERSION)") -o $$OUT .; \
 	then \
 		printf '\033[32mDone\033[0m in %sms, size %s\n' "$$(( $$($(NOW_MS)) - START ))" "$$(du -h $$OUT | cut -f1)"; \
 	else \

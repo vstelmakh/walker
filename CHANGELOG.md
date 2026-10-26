@@ -2,6 +2,10 @@
 All notable changes to this project are documented in this file.  
 Releases following [Semantic Versioning](https://semver.org/spec/v2.0.0.html) specification.  
 
+## 1.0.1
+- Added missing `--help` (`-h`) and `--version` (`-v`) options
+- The installation script gives a reason when asks for the `sudo` password
+
 ## 1.0.0
 Initial release.
 

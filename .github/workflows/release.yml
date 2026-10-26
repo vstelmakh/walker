@@ -41,6 +41,8 @@ jobs:
     name: 'Build and Test'
     needs: validate
     uses: ./.github/workflows/build-and-test.yml
+    with:
+      version: ${{ inputs.version }}
 
   release:
     name: 'Create Release'
