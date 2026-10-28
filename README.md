@@ -37,8 +37,7 @@ curl -fsSL https://raw.githubusercontent.com/vstelmakh/walker/main/install.sh | 
    sudo mv walker /usr/local/bin/walker
    ```
 
-> [!NOTE]
-> macOS may block a binary downloaded in a browser because it is not signed. Remove the quarantine flag to
+> **Note:** macOS may block a binary downloaded in a browser because it is not signed. Remove the quarantine flag to
 > allow it: `xattr -d com.apple.quarantine walker`.
 
 </details>
@@ -136,9 +135,37 @@ best match is selected first.
 | `Ctrl+C`    | Exit without changing directory.                                                                 |
 | Any text    | Search. Pasted text is added to the search too.                                                  |
 
+## Configuration
+
+Configure walker with command line options. To apply an option every time, add it to the shell function from
+[Setup](#setup).
+
+Bash and Zsh:
+```bash
+function lk {
+  cd "$(walker --show-hidden "$@")"
+}
+```
+
+Fish:
+```fish
+function lk
+  set -l dir (walker --show-hidden $argv); and cd $dir
+end
+```
+
+### Options
+
+| Option          | Description                                          |
+|-----------------|------------------------------------------------------|
+| `--show-hidden` | Show hidden directories, the ones starting with `.`. |
+
+> [!TIP]
+> Run `walker --help` to see all available configuration options.
+
 ## Uninstall
 
-1. Remove the binary. The install script puts it in `/usr/local/bin` by default:
+1. Remove the binary. The installation script puts it in `/usr/local/bin` by default:
    ```bash
    sudo rm /usr/local/bin/walker
    ```

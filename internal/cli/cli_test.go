@@ -3,6 +3,8 @@ package cli
 import (
 	"strings"
 	"testing"
+
+	"github.com/vstelmakh/walker/internal/config"
 )
 
 func TestParse(t *testing.T) {
@@ -18,6 +20,7 @@ func TestParse(t *testing.T) {
 		{name: "help short", args: []string{"-h"}, want: Options{Help: true}},
 		{name: "version", args: []string{"--version"}, want: Options{Version: true}},
 		{name: "version short", args: []string{"-v"}, want: Options{Version: true}},
+		{name: "setting with directory", args: []string{"--show-hidden", "projects"}, want: Options{Dir: "projects"}},
 		{name: "short options combined", args: []string{"-vh"}, want: Options{Help: true, Version: true}},
 		{name: "option before directory", args: []string{"-v", "projects"}, want: Options{Version: true, Dir: "projects"}},
 		{name: "option after directory", args: []string{"projects", "-v"}, want: Options{Version: true, Dir: "projects"}},
@@ -30,7 +33,7 @@ func TestParse(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := Parse(test.args)
+			got, _, err := Parse(test.args, config.Default())
 			if test.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), test.wantErr) {
 					t.Fatalf("Parse() error = %v, want it to contain %q", err, test.wantErr)
@@ -47,8 +50,59 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func TestParseConfig(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  config.Config
+		args []string
+		want config.Config
+	}{
+		{
+			name: "no options keep defaults",
+			cfg:  config.Config{},
+			args: nil,
+			want: config.Config{},
+		},
+		{
+			name: "no options keep given config",
+			cfg:  config.Config{ShowHidden: true},
+			args: nil,
+			want: config.Config{ShowHidden: true},
+		},
+		{
+			name: "show hidden",
+			cfg:  config.Config{},
+			args: []string{"--show-hidden"},
+			want: config.Config{ShowHidden: true},
+		},
+		{
+			name: "show hidden false overrides config",
+			cfg:  config.Config{ShowHidden: true},
+			args: []string{"--show-hidden=false"},
+			want: config.Config{ShowHidden: false},
+		},
+		{
+			name: "last option wins",
+			cfg:  config.Config{},
+			args: []string{"--show-hidden", "--show-hidden=false"},
+			want: config.Config{ShowHidden: false},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, got, err := Parse(test.args, test.cfg)
+			if err != nil {
+				t.Fatalf("Parse() error: %v", err)
+			}
+			if got != test.want {
+				t.Errorf("Parse() config = %+v, want %+v", got, test.want)
+			}
+		})
+	}
+}
+
 func TestParseErrorHint(t *testing.T) {
-	_, err := Parse([]string{"--hepl"})
+	_, _, err := Parse([]string{"--hepl"}, config.Default())
 	if err == nil || !strings.HasSuffix(err.Error(), "see: walker --help") {
 		t.Fatalf("Parse() error = %v, want it to end with the help hint", err)
 	}
@@ -77,7 +131,8 @@ func TestOptionsInfo(t *testing.T) {
 
 func TestHelpText(t *testing.T) {
 	got := helpText()
-	for _, want := range []string{"Usage: walker [options] [dir]", "Options:", "-h, --help", "-v, --version"} {
+	wants := []string{"Usage: walker [options] [dir]", "Options:", "-h, --help", "-v, --version", "    --show-hidden"}
+	for _, want := range wants {
 		if !strings.Contains(got, want) {
 			t.Errorf("helpText() = %q, want it to contain %q", got, want)
 		}

@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/vstelmakh/walker/internal/cli"
+	"github.com/vstelmakh/walker/internal/config"
 	"github.com/vstelmakh/walker/internal/dirs"
 	"github.com/vstelmakh/walker/internal/nav"
 	"github.com/vstelmakh/walker/internal/search"
@@ -31,7 +32,7 @@ func main() {
 
 // run draws the UI on stderr, so stdout carries only the path, for example: cd "$(walker)".
 func run(args []string) error {
-	opts, err := cli.Parse(args)
+	opts, cfg, err := cli.Parse(args, config.Default())
 	if err != nil {
 		return err
 	}
@@ -48,7 +49,7 @@ func run(args []string) error {
 		return err
 	}
 
-	navigator, err := nav.New(dirs.Lister{ShowHidden: false}, search.Matcher{}, start)
+	navigator, err := nav.New(dirs.Lister{ShowHidden: cfg.ShowHidden}, search.Matcher{}, start)
 	if err != nil {
 		return err
 	}
