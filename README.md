@@ -132,6 +132,7 @@ best match is selected first.
 | `Enter`     | Open the directory under the selection. On the first row, select the current directory and exit. |
 | `Backspace` | Delete the last search character. With an empty search, go to the first row, then back.          |
 | `Esc`       | Clear the search, then move to the first row, then exit without changing directory.              |
+| `Ctrl+H`    | Show or hide hidden directories, the ones starting with `.`.                                     |
 | `Ctrl+C`    | Exit without changing directory.                                                                 |
 | Any text    | Search. Pasted text is added to the search too.                                                  |
 

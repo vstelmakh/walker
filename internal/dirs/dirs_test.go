@@ -18,16 +18,16 @@ func TestListerList(t *testing.T) {
 	mustSymlink(t, filepath.Join(dir, "missing"), filepath.Join(dir, "broken-link"))
 
 	tests := []struct {
-		name   string
-		lister Lister
-		want   []string
+		name       string
+		showHidden bool
+		want       []string
 	}{
-		{name: "hidden excluded", lister: Lister{}, want: []string{"A", "b", "link"}},
-		{name: "hidden included", lister: Lister{ShowHidden: true}, want: []string{".hidden", "A", "b", "link"}},
+		{name: "hidden excluded", showHidden: false, want: []string{"A", "b", "link"}},
+		{name: "hidden included", showHidden: true, want: []string{".hidden", "A", "b", "link"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := test.lister.List(dir)
+			got, err := Lister{}.List(dir, test.showHidden)
 			if err != nil {
 				t.Fatalf("List() error: %v", err)
 			}
@@ -39,7 +39,7 @@ func TestListerList(t *testing.T) {
 }
 
 func TestListerListEmpty(t *testing.T) {
-	got, err := Lister{}.List(t.TempDir())
+	got, err := Lister{}.List(t.TempDir(), false)
 	if err != nil {
 		t.Fatalf("List() error: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestListerListEmpty(t *testing.T) {
 }
 
 func TestListerListMissingDir(t *testing.T) {
-	_, err := Lister{}.List(filepath.Join(t.TempDir(), "missing"))
+	_, err := Lister{}.List(filepath.Join(t.TempDir(), "missing"), false)
 	if err == nil {
 		t.Fatal("List() error = nil, want error")
 	}

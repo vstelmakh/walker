@@ -12,12 +12,15 @@ var errDenied = errors.New("permission denied")
 // fakeLister returns errDenied for a dir that is not in the map.
 type fakeLister map[string][]string
 
-func (f fakeLister) List(dir string) ([]string, error) {
+func (f fakeLister) List(dir string, showHidden bool) ([]string, error) {
 	entries, ok := f[dir]
 	if !ok {
 		return nil, errDenied
 	}
-	return entries, nil
+	if showHidden {
+		return entries, nil
+	}
+	return slices.DeleteFunc(slices.Clone(entries), func(name string) bool { return strings.HasPrefix(name, ".") }), nil
 }
 
 type prefixMatcher struct{}
@@ -37,6 +40,8 @@ var tree = fakeLister{
 	"/home":     {"alice", "bob", "carol"},
 	"/home/bob": {},
 	"/tmp":      {"locked"},
+	"/work":     {".git", "app", "docs"},
+	"/work/app": {},
 }
 
 func TestNew(t *testing.T) {
@@ -46,7 +51,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewError(t *testing.T) {
-	_, err := New(tree, prefixMatcher{}, "/missing")
+	_, err := New(tree, prefixMatcher{}, "/missing", false)
 	if !errors.Is(err, errDenied) {
 		t.Fatalf("New() error = %v, want %v", err, errDenied)
 	}
@@ -137,7 +142,7 @@ func TestBackRoot(t *testing.T) {
 }
 
 func TestBackError(t *testing.T) {
-	navigator, err := New(fakeLister{"/home": {"alice", "bob", "carol"}}, prefixMatcher{}, "/home")
+	navigator, err := New(fakeLister{"/home": {"alice", "bob", "carol"}}, prefixMatcher{}, "/home", false)
 	mustSucceed(t, err)
 
 	if err := navigator.Back(); !errors.Is(err, errDenied) {
@@ -145,6 +150,75 @@ func TestBackError(t *testing.T) {
 	}
 
 	assertState(t, navigator, "/home", []string{"alice", "bob", "carol"}, -1)
+}
+
+func TestNewShowHidden(t *testing.T) {
+	navigator, err := New(tree, prefixMatcher{}, "/work", true)
+	mustSucceed(t, err)
+
+	assertState(t, navigator, "/work", []string{".git", "app", "docs"}, -1)
+	assertShowHidden(t, navigator, true)
+}
+
+func TestToggleHidden(t *testing.T) {
+	navigator := mustNew(t, "/work")
+	navigator.MoveDown()
+	navigator.MoveDown()
+	assertState(t, navigator, "/work", []string{"app", "docs"}, 1)
+
+	mustSucceed(t, navigator.ToggleHidden())
+	assertState(t, navigator, "/work", []string{".git", "app", "docs"}, 2)
+	assertShowHidden(t, navigator, true)
+
+	mustSucceed(t, navigator.ToggleHidden())
+	assertState(t, navigator, "/work", []string{"app", "docs"}, 1)
+	assertShowHidden(t, navigator, false)
+}
+
+func TestToggleHiddenStaysAfterBack(t *testing.T) {
+	navigator := mustNew(t, "/work/app")
+	mustSucceed(t, navigator.ToggleHidden())
+
+	mustSucceed(t, navigator.Back())
+
+	assertState(t, navigator, "/work", []string{".git", "app", "docs"}, 1)
+}
+
+func TestToggleHiddenMovesCursorFromHiddenEntry(t *testing.T) {
+	navigator, err := New(tree, prefixMatcher{}, "/work", true)
+	mustSucceed(t, err)
+	navigator.MoveDown()
+
+	mustSucceed(t, navigator.ToggleHidden())
+
+	assertState(t, navigator, "/work", []string{"app", "docs"}, -1)
+}
+
+func TestToggleHiddenKeepsQuery(t *testing.T) {
+	navigator := mustNew(t, "/work")
+	navigator.SetQuery(".")
+	assertState(t, navigator, "/work", nil, 0)
+
+	mustSucceed(t, navigator.ToggleHidden())
+
+	if got := navigator.Query(); got != "." {
+		t.Errorf("Query() = %q, want %q", got, ".")
+	}
+	assertState(t, navigator, "/work", []string{".git"}, 0)
+}
+
+func TestToggleHiddenError(t *testing.T) {
+	lister := fakeLister{"/work": {".git", "app", "docs"}}
+	navigator, err := New(lister, prefixMatcher{}, "/work", false)
+	mustSucceed(t, err)
+	delete(lister, "/work")
+
+	if err := navigator.ToggleHidden(); !errors.Is(err, errDenied) {
+		t.Fatalf("ToggleHidden() error = %v, want %v", err, errDenied)
+	}
+
+	assertState(t, navigator, "/work", []string{"app", "docs"}, -1)
+	assertShowHidden(t, navigator, false)
 }
 
 func TestAtCurrent(t *testing.T) {
@@ -281,7 +355,7 @@ func TestCount(t *testing.T) {
 
 func mustNew(t *testing.T, dir string) *Navigator {
 	t.Helper()
-	navigator, err := New(tree, prefixMatcher{}, dir)
+	navigator, err := New(tree, prefixMatcher{}, dir, false)
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -314,6 +388,13 @@ func assertCount(t *testing.T, navigator *Navigator, matched, total int) {
 	t.Helper()
 	if gotMatched, gotTotal := navigator.Count(); gotMatched != matched || gotTotal != total {
 		t.Errorf("Count() = %d, %d, want %d, %d", gotMatched, gotTotal, matched, total)
+	}
+}
+
+func assertShowHidden(t *testing.T, navigator *Navigator, want bool) {
+	t.Helper()
+	if got := navigator.ShowHidden(); got != want {
+		t.Errorf("ShowHidden() = %t, want %t", got, want)
 	}
 }
 

@@ -108,6 +108,8 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		case cancelQuit:
 			return tea.Quit
 		}
+	case slices.Contains(keys.ToggleHidden, key):
+		m.err = m.navigator.ToggleHidden()
 	case slices.Contains(keys.Quit, key):
 		return tea.Quit
 	case msg.Text != "":

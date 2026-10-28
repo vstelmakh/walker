@@ -14,7 +14,9 @@ type KeyMap struct {
 	Erase []string
 	// Cancel clears the query, then moves the cursor to nav.Current, then exits without a result.
 	Cancel []string
-	Quit   []string
+	// ToggleHidden shows or hides the hidden directories.
+	ToggleHidden []string
+	Quit         []string
 }
 
 // DefaultKeyMap leaves letters free for the search.
@@ -27,6 +29,8 @@ func DefaultKeyMap() KeyMap {
 		Confirm: []string{"enter"},
 		Erase:   []string{"backspace"},
 		Cancel:  []string{"esc"},
-		Quit:    []string{"ctrl+c"},
+		// Some terminals send ctrl+h for backspace or ctrl+backspace. A wrong toggle is visible and easy to undo.
+		ToggleHidden: []string{"ctrl+h"},
+		Quit:         []string{"ctrl+c"},
 	}
 }

@@ -49,7 +49,7 @@ func run(args []string) error {
 		return err
 	}
 
-	navigator, err := nav.New(dirs.Lister{ShowHidden: cfg.ShowHidden}, search.Matcher{}, start)
+	navigator, err := nav.New(dirs.Lister{}, search.Matcher{}, start, cfg.ShowHidden)
 	if err != nil {
 		return err
 	}
