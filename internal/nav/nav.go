@@ -9,9 +9,9 @@ import (
 // Current is the entry that stands for the current directory. The cursor can be on it only when the query is empty.
 const Current = "."
 
-// Lister lists the names of the subdirectories in a directory.
+// Lister lists the names of the subdirectories in a directory. Hidden ones are included only when showHidden is true.
 type Lister interface {
-	List(dir string) ([]string, error)
+	List(dir string, showHidden bool) ([]string, error)
 }
 
 // Matcher filters names against a search query and ranks them, best match first.
@@ -33,18 +33,20 @@ type Entry struct {
 }
 
 type Navigator struct {
-	lister  Lister
-	matcher Matcher
-	dir     string
-	names   []string
-	query   string
-	entries []Entry
-	cursor  int
+	lister     Lister
+	matcher    Matcher
+	showHidden bool
+	dir        string
+	names      []string
+	query      string
+	entries    []Entry
+	cursor     int
 }
 
 // Creates a navigator that starts in dir, which must be an absolute and clean path.
-func New(lister Lister, matcher Matcher, dir string) (*Navigator, error) {
-	navigator := &Navigator{lister: lister, matcher: matcher}
+// showHidden is the start value, ToggleHidden changes it.
+func New(lister Lister, matcher Matcher, dir string, showHidden bool) (*Navigator, error) {
+	navigator := &Navigator{lister: lister, matcher: matcher, showHidden: showHidden}
 	if err := navigator.load(dir, ""); err != nil {
 		return nil, err
 	}
@@ -57,6 +59,10 @@ func (n *Navigator) Dir() string {
 
 func (n *Navigator) Query() string {
 	return n.query
+}
+
+func (n *Navigator) ShowHidden() bool {
+	return n.showHidden
 }
 
 // Entries are the subdirectory names, without Current.
@@ -140,8 +146,23 @@ func (n *Navigator) Back() error {
 	return n.load(parent, filepath.Base(n.dir))
 }
 
+// ToggleHidden shows or hides the hidden directories and keeps the query.
+// The cursor stays on the entry it was on. When that entry is not in the list anymore, it moves to the first row.
+func (n *Navigator) ToggleHidden() error {
+	names, err := n.lister.List(n.dir, !n.showHidden)
+	if err != nil {
+		return err
+	}
+	previous := n.focusedName()
+	n.showHidden = !n.showHidden
+	n.names = names
+	n.rebuildEntries()
+	n.moveCursorTo(previous)
+	return nil
+}
+
 func (n *Navigator) load(dir, cursorOn string) error {
-	names, err := n.lister.List(dir)
+	names, err := n.lister.List(dir, n.showHidden)
 	if err != nil {
 		return err
 	}

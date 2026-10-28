@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -23,18 +24,22 @@ var errDenied = errors.New("permission denied")
 
 type fakeLister map[string][]string
 
-func (f fakeLister) List(dir string) ([]string, error) {
+func (f fakeLister) List(dir string, showHidden bool) ([]string, error) {
 	entries, ok := f[dir]
 	if !ok {
 		return nil, errDenied
 	}
-	return entries, nil
+	if showHidden {
+		return entries, nil
+	}
+	return slices.DeleteFunc(slices.Clone(entries), func(name string) bool { return strings.HasPrefix(name, ".") }), nil
 }
 
 var tree = fakeLister{
 	"/":         {"home"},
 	"/home":     {"alice", "bob", "carol", "dave", "erin"},
 	"/home/bob": {},
+	"/work":     {".git", "app"},
 }
 
 var (
@@ -46,6 +51,7 @@ var (
 	keyBack  = tea.KeyPressMsg{Code: tea.KeyBackspace}
 	keyEsc   = tea.KeyPressMsg{Code: tea.KeyEscape}
 	keyCtrlC = tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}
+	keyCtrlH = tea.KeyPressMsg{Code: 'h', Mod: tea.ModCtrl}
 	keySpace = tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
 )
 
@@ -144,7 +150,7 @@ func TestQuit(t *testing.T) {
 func TestCustomKeyMap(t *testing.T) {
 	keys := DefaultKeyMap()
 	keys.Down = []string{"j"}
-	navigator, err := nav.New(tree, search.Matcher{}, "/home")
+	navigator, err := nav.New(tree, search.Matcher{}, "/home", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,6 +163,17 @@ func TestCustomKeyMap(t *testing.T) {
 	send(model, tea.KeyPressMsg{Code: 'j', Text: "j"})
 	assertView(t, model, "▌alice")
 	assertQuery(t, model, "")
+}
+
+func TestToggleHidden(t *testing.T) {
+	model := newModel(t, "/work")
+	assertView(t, model, testSeparator+"\n  app\n\n")
+
+	send(model, keyCtrlH)
+	assertView(t, model, testSeparator+"\n  .git\n  app\n")
+
+	send(model, keyCtrlH)
+	assertView(t, model, testSeparator+"\n  app\n\n")
 }
 
 func TestSearchFilters(t *testing.T) {
@@ -356,7 +373,7 @@ func TestViewFitsWidth(t *testing.T) {
 }
 
 func TestViewEmptyUntilSizeKnown(t *testing.T) {
-	navigator, err := nav.New(tree, search.Matcher{}, "/home")
+	navigator, err := nav.New(tree, search.Matcher{}, "/home", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -561,7 +578,7 @@ func TestAdjustOffset(t *testing.T) {
 
 func newModel(t *testing.T, dir string) *Model {
 	t.Helper()
-	navigator, err := nav.New(tree, search.Matcher{}, dir)
+	navigator, err := nav.New(tree, search.Matcher{}, dir, false)
 	if err != nil {
 		t.Fatalf("nav.New() error: %v", err)
 	}

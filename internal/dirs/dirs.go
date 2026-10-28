@@ -9,12 +9,11 @@ import (
 	"strings"
 )
 
-type Lister struct {
-	ShowHidden bool
-}
+type Lister struct{}
 
 // List sorts the names case-insensitively and includes symbolic links to directories.
-func (l Lister) List(dir string) ([]string, error) {
+// Hidden directories, the ones whose names start with a dot, are included only when showHidden is true.
+func (Lister) List(dir string, showHidden bool) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -22,7 +21,7 @@ func (l Lister) List(dir string) ([]string, error) {
 
 	names := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		if !l.ShowHidden && strings.HasPrefix(entry.Name(), ".") {
+		if !showHidden && strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
 		if !isDir(dir, entry) {
