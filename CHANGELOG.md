@@ -2,7 +2,7 @@
 All notable changes to this project are documented in this file.  
 Releases following [Semantic Versioning](https://semver.org/spec/v2.0.0.html) specification.  
 
-## Unreleased
+## 1.1.0
 - Added `--show-hidden` option to show hidden directories
 - Added `Ctrl+H` key binding to show or hide hidden directories
 
