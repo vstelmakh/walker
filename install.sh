@@ -68,18 +68,22 @@ main() {
     sudo_cmd=""
     if [[ ! -w "$install_dir" ]]; then
         sudo_cmd="sudo"
-        echo "$install_dir is not writable by you. Using sudo to install there, it may ask for your password."
+        echo "No write access to $install_dir. Installing with sudo, which may ask for your password."
     fi
 
     $sudo_cmd mkdir -p "$install_dir"
     $sudo_cmd install -m 755 "$tmp_dir/$asset" "$target"
 
     echo "Installed: $target"
-    "$target" --version || fail "Installed, but \"$target --version\" failed."
+    "$target" --version || fail "Failed to run \"$target --version\"."
 }
 
 fail() {
-    echo "Error: $*" >&2
+    if [[ -t 2 && -z "${NO_COLOR:-}" ]]; then
+        printf '\033[31mError:\033[0m %s\n' "$*" >&2
+    else
+        echo "Error: $*" >&2
+    fi
     exit 1
 }
 
