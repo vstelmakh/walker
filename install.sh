@@ -75,6 +75,7 @@ main() {
     $sudo_cmd install -m 755 "$tmp_dir/$asset" "$target"
 
     echo "Installed: $target"
+    "$target" --version || fail "Installed, but \"$target --version\" failed."
 }
 
 fail() {
