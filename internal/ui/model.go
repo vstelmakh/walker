@@ -306,7 +306,7 @@ func (m *Model) listRow(text string, selected bool) string {
 func (m *Model) footer() string {
 	theme := m.config.Theme
 	matched, total := m.navigator.Count()
-	left := theme.Counter.Render(fmt.Sprintf("%d/%d", matched, total))
+	left := theme.Counter.Render(fmt.Sprintf("%d/%d  %s", matched, total, theme.hiddenState(m.navigator.ShowHidden())))
 
 	right := theme.Hint.Render(m.hints())
 	if m.err != nil {
