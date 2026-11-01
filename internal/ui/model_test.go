@@ -543,6 +543,14 @@ func TestViewCounter(t *testing.T) {
 	assertView(t, model, " 1/5")
 }
 
+func TestViewHiddenState(t *testing.T) {
+	model := newModel(t, "/home")
+	assertView(t, model, " 5/5  ○ hidden ")
+
+	send(model, keyCtrlH)
+	assertView(t, model, " 5/5  ● hidden ")
+}
+
 func TestViewCursor(t *testing.T) {
 	model := newModel(t, "/home")
 

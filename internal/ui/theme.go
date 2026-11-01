@@ -12,6 +12,10 @@ type Theme struct {
 	NoSubdirectoriesText string
 	// ErrorPrefix goes before the error message in the footer.
 	ErrorPrefix string
+	// HiddenText goes after the directory counter. The symbol before it says if the hidden directories are shown.
+	HiddenText      string
+	HiddenOnSymbol  string
+	HiddenOffSymbol string
 	// The footer hint texts say what a key does. Each key is shown with the text for its current action.
 	HintOpenText   string
 	HintSelectText string
@@ -62,6 +66,9 @@ func DefaultTheme() Theme {
 		NoMatchesText:        "no matches",
 		NoSubdirectoriesText: "no subdirectories",
 		ErrorPrefix:          "error: ",
+		HiddenText:           "hidden",
+		HiddenOnSymbol:       "●",
+		HiddenOffSymbol:      "○",
 		HintOpenText:         "open",
 		HintSelectText:       "select",
 		HintBackText:         "back",
@@ -105,6 +112,13 @@ func (t Theme) confirmHint(action confirmAction) string {
 		return t.HintSelectText
 	}
 	return t.HintOpenText
+}
+
+func (t Theme) hiddenState(shown bool) string {
+	if shown {
+		return t.HiddenOnSymbol + " " + t.HiddenText
+	}
+	return t.HiddenOffSymbol + " " + t.HiddenText
 }
 
 func (t Theme) cancelHint(action cancelAction) string {
