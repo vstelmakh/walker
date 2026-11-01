@@ -15,7 +15,10 @@ checksum and puts it in `/usr/local/bin`:
 curl -fsSL https://raw.githubusercontent.com/vstelmakh/walker/main/install.sh | bash
 ```
 
-To update, run the same command again. It replaces the installed binary.
+Then add the shell function from [Setup](#setup). Without it, walker only prints the path and can't change directory.
+
+> [!TIP]
+> To update, run the installation command again. It replaces the installed binary.
 
 <details>
 <summary>Specific Version or Directory</summary>
@@ -38,7 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/vstelmakh/walker/main/install.sh | 
    ```
 
 > **Note:** macOS may block a binary downloaded in a browser because it is not signed. Remove the quarantine flag to
-> allow it: `xattr -d com.apple.quarantine walker`.
+> allow it: `xattr -d com.apple.quarantine /usr/local/bin/walker`.
 
 </details>
 
@@ -59,8 +62,7 @@ A program can't change the directory of your shell. Walker prints the path, and 
 Add the function to your shell config.
 
 > [!TIP]
-> You can name the function anything you like. It does not need to be `lk`. This is what you need to type in your
-> terminal to start the navigator.
+> The examples name the function `lk`, but you can use any name you like. It is the command you type to start walker.
 
 ### Bash and Zsh
 
@@ -82,10 +84,10 @@ end
 
 ### Reload the Shell
 
-Restart the shell for the function to become available.
+Restart the shell, or reload it as shown below, for the function to become available.
 
 <details>
-<summary>Reload without restarting</summary>
+<summary>Reload without Restarting</summary>
 
 Bash:
 ```bash
@@ -114,9 +116,10 @@ lk ~/projects
 
 <img alt="Walker navigating example" src="resources/example.gif" width="638">
 
-The first row is the current directory. Below it are its subdirectories. Move to the one you want and press `Enter`
-to open it. When you are in the right place, move back to the first row and press `Enter` to select it. Your shell
-changes to the selected directory.
+The first row is the current directory. Below it are its subdirectories. To change directory:
+1. Move to a subdirectory and press `Enter` to open it.
+2. Repeat until you are in the directory you want.
+3. Move to the first row and press `Enter`. Your shell changes to that directory.
 
 Start typing at any time to filter the list. The search is fuzzy and looks at the names in the current directory, so
 `dwn` finds `Downloads`. A lowercase query ignores case, a query with an uppercase letter matches the case exactly. The

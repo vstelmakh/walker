@@ -20,9 +20,11 @@ env:
 
 jobs:
   validate:
-    name: 'Validate Version'
+    name: 'Validate'
     runs-on: 'ubuntu-latest'
     timeout-minutes: 5
+    outputs:
+      notes: ${{ steps.notes.outputs.notes }}
     steps:
       - name: 'Git Checkout'
         uses: actions/checkout@v7
@@ -36,6 +38,27 @@ jobs:
             echo "::error title=Tag exists::Tag '$VERSION' already exists."
             exit 1
           fi
+      - name: 'Read Release Notes'
+        id: notes
+        run: |
+          if ! grep -Fxq "## $VERSION" CHANGELOG.md; then
+            echo "::error title=No changelog::CHANGELOG.md has no '## $VERSION' section."
+            exit 1
+          fi
+          # Lines after the version heading, up to the next version heading, without leading blank lines
+          notes="$(awk -v heading="## $VERSION" '
+            $0 == heading { found = 1; next }
+            found && /^## / { exit }
+            found && !started && /^[[:space:]]*$/ { next }
+            found { started = 1; print }
+          ' CHANGELOG.md)"
+          if [[ -z "${notes//[[:space:]]/}" ]]; then
+            echo "::error title=Empty changelog::CHANGELOG.md section '## $VERSION' is empty."
+            exit 1
+          fi
+          printf '%s\n' "$notes"
+          delimiter="EOF_$(openssl rand -hex 16)"
+          printf 'notes<<%s\n%s\n%s\n' "$delimiter" "$notes" "$delimiter" >> "$GITHUB_OUTPUT"
 
   build_and_test:
     name: 'Build and Test'
@@ -46,7 +69,7 @@ jobs:
 
   release:
     name: 'Create Release'
-    needs: build_and_test
+    needs: [validate, build_and_test]
     runs-on: 'ubuntu-latest'
     timeout-minutes: 10
     permissions:
@@ -67,8 +90,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          NOTES: ${{ needs.validate.outputs.notes }}
         run: |
           gh release create "$VERSION" dist/* \
             --target "$GITHUB_SHA" \
             --title "$VERSION" \
-            --notes ''
+            --notes "$NOTES"
